@@ -449,9 +449,90 @@ def terminal(t: dict[str, str]) -> str:
 """
 
 
+SNAKE_COLORS = {
+    "light": ["#ebedf0", "#ddd6fe", "#a78bfa", "#7c3aed", "#5b21b6"],
+    "dark": ["#161b22", "#2e1065", "#5b21b6", "#7c3aed", "#a78bfa"],
+}
+
+
+def snake(t: dict[str, str], palette: list[str]) -> str:
+    """A decorative contribution grid and a snake that eats it column by column.
+
+    The grid is seeded, not real data. The head walks a boustrophedon path (down one
+    column, up the next) one cell per STEP seconds, entering from the left edge and
+    leaving on the right; each coloured cell turns empty the moment the head reaches it,
+    and everything resets after a short pause.
+    """
+    import random
+
+    cols, rows, cell, gap, pad_x, top = 52, 7, 11, 3, 28, 46
+    pitch = cell + gap
+    w = pad_x * 2 + cols * pitch - gap
+    h = top + rows * pitch - gap + 22
+    step, pause = 0.055, 1.6
+
+    rng = random.Random(20261109)
+    levels = [[rng.choices(range(5), weights=[22, 30, 25, 14, 9])[0] for _ in range(rows)] for _ in range(cols)]
+
+    def center(c: int, r: int) -> tuple[float, float]:
+        return pad_x + c * pitch + cell / 2, top + r * pitch + cell / 2
+
+    order = [(c, r) for c in range(cols) for r in (range(rows) if c % 2 == 0 else reversed(range(rows)))]
+    sx, sy = center(0, 0)
+    ex, ey = center(*order[-1])
+    points = [(sx - pitch * 2, sy), *(center(c, r) for c, r in order), (ex + pitch * 2, ey)]
+    path = "M" + " L".join(f"{x:.1f} {y:.1f}" for x, y in points)
+    move = (len(points) - 1) * step
+    total = move + pause
+    when = {cell_: (i + 2) * step for i, cell_ in enumerate(order)}  # two entry steps first
+
+    cells = []
+    for c in range(cols):
+        for r in range(rows):
+            x, y = pad_x + c * pitch, top + r * pitch
+            lvl = levels[c][r]
+            base = f'<rect x="{x}" y="{y}" width="{cell}" height="{cell}" rx="2.5" fill="{palette[lvl]}"'
+            if lvl:
+                f = when[(c, r)] / total
+                base += (
+                    f'><animate attributeName="fill" values="{palette[lvl]};{palette[0]}" '
+                    f'keyTimes="0;{f:.4f}" calcMode="discrete" dur="{total:.2f}s" repeatCount="indefinite"/></rect>'
+                )
+            else:
+                base += "/>"
+            cells.append("    " + base)
+
+    seg_count = 6
+    segs = []
+    for k in reversed(range(seg_count)):
+        size = cell + 1 - k * 0.9
+        alpha = 1 - k * 0.12
+        color = t["accent_b"] if k == 0 else t["accent_a"]
+        segs.append(
+            f'  <rect x="{-size / 2:.1f}" y="{-size / 2:.1f}" width="{size:.1f}" height="{size:.1f}" rx="3.5" '
+            f'fill="{color}" opacity="0">'
+            # hidden until its first motion starts, otherwise it would sit at the origin
+            f'<set attributeName="opacity" to="{alpha:.2f}" begin="{k * step:.3f}s"/>'
+            f'<animateMotion dur="{total:.2f}s" begin="{k * step:.3f}s" repeatCount="indefinite" '
+            f'keyPoints="0;1;1" keyTimes="0;{move / total:.4f};1" calcMode="linear" path="{path}"/></rect>'
+        )
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}" role="img" aria-label="A snake eating a contribution graph">
+  <defs><clipPath id="frame"><rect width="{w}" height="{h}" rx="12"/></clipPath></defs>
+  <rect width="{w}" height="{h}" rx="12" fill="{t["card_bg"]}"/>
+  <text x="{pad_x}" y="28" font-family="{MONO}" font-size="11" fill="{t["muted"]}"># eating the backlog</text>
+  <g clip-path="url(#frame)">
+{chr(10).join(cells)}
+{chr(10).join(segs)}
+  </g>
+  <rect x="0.5" y="0.5" width="{w - 1}" height="{h - 1}" rx="12" fill="none" stroke="{t["border"]}"/>
+</svg>
+"""
+
+
 def main() -> None:
     ASSETS.mkdir(exist_ok=True)
     for name, t in THEMES.items():
+        (ASSETS / f"snake-{name}.svg").write_text(snake(t, SNAKE_COLORS[name]), encoding="utf-8")
         (ASSETS / f"terminal-{name}.svg").write_text(terminal(t), encoding="utf-8")
         (ASSETS / f"banner-{name}.svg").write_text(banner(t), encoding="utf-8")
         (ASSETS / f"flow-{name}.svg").write_text(flow(t), encoding="utf-8")

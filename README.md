@@ -98,7 +98,7 @@ print(BackendEngineer().introduce())
 <img src="https://raw.githubusercontent.com/alekseyiovchev/alekseyiovchev/main/assets/divider-dark.svg" alt="" width="100%">
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/alekseyiovchev/alekseyiovchev/output/snake-dark.svg" alt="A snake eating my contribution graph" width="100%">
+  <img src="https://raw.githubusercontent.com/alekseyiovchev/alekseyiovchev/main/assets/snake-dark.svg" alt="A snake eating my contribution graph" width="100%">
 </p>
 
 <h3 align="center">🤝 Connect</h3>
