@@ -399,9 +399,60 @@ def status_page(t: dict[str, str]) -> str:
     return _panel(t, "status.alekseyiovchev", "# uptime of the things I care about", body, style)
 
 
+TERMINAL_CMD = "python whoami.py"
+TERMINAL_OUT = [
+    "Hi, I'm Oleksii Iovchev, backend lead.",
+    "I build async services and message-driven",
+    "workflows that stay boring in production.",
+]
+
+
+def terminal(t: dict[str, str]) -> str:
+    """A terminal window replaying `python whoami.py`: the output lines appear one by one,
+    stay, and the whole run repeats every CYCLE seconds."""
+    w, cycle, line_h, top = 720, 9, 26, 78
+    h = top + line_h * (len(TERMINAL_OUT) + 1) + 18
+    lines = []
+    for i, text in enumerate(TERMINAL_OUT):
+        lines.append(
+            f'  <text class="out" style="animation-delay:{0.9 + i * 0.45:.2f}s" x="28" y="{top + line_h * (i + 1)}">{escape(text)}</text>'
+        )
+    prompt_y = top + line_h * (len(TERMINAL_OUT) + 1)
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}" role="img" aria-label="$ {TERMINAL_CMD}: {escape(" ".join(TERMINAL_OUT))}">
+  <defs>
+    <linearGradient id="bar" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="{t["accent_a"]}" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="{t["accent_b"]}" stop-opacity="0.10"/>
+    </linearGradient>
+    <clipPath id="frame"><rect width="{w}" height="{h}" rx="12"/></clipPath>
+  </defs>
+  <style>
+    .out {{ animation: show {cycle}s linear infinite; }}
+    @keyframes show {{ 0% {{ opacity: 0; }} 3% {{ opacity: 1; }} 92% {{ opacity: 1; }} 100% {{ opacity: 0; }} }}
+    .cursor {{ animation: blink 1.1s steps(1) infinite; }}
+    @keyframes blink {{ 50% {{ opacity: 0; }} }}
+    {REDUCED_MOTION}
+  </style>
+  <g clip-path="url(#frame)">
+    <rect width="{w}" height="{h}" fill="{t["card_bg"]}"/>
+    <rect width="{w}" height="40" fill="url(#bar)"/>
+  </g>
+  <rect x="0.5" y="0.5" width="{w - 1}" height="{h - 1}" rx="12" fill="none" stroke="{t["border"]}"/>
+  <circle cx="24" cy="20" r="6" fill="#ff5f57"/><circle cx="44" cy="20" r="6" fill="#febc2e"/><circle cx="64" cy="20" r="6" fill="#28c840"/>
+  <text x="{w / 2}" y="25" text-anchor="middle" font-family="{MONO}" font-size="12" fill="{t["muted"]}">~/alekseyiovchev — zsh</text>
+  <g font-family="{MONO}" font-size="15" fill="{t["text"]}">
+  <text x="28" y="{top}"><tspan fill="{t["accent_b"]}">$</tspan> {escape(TERMINAL_CMD)}</text>
+{chr(10).join(lines)}
+  <text x="28" y="{prompt_y}"><tspan fill="{t["accent_b"]}">$</tspan><tspan class="cursor" fill="{t["accent_a"]}"> ▍</tspan></text>
+  </g>
+</svg>
+"""
+
+
 def main() -> None:
     ASSETS.mkdir(exist_ok=True)
     for name, t in THEMES.items():
+        (ASSETS / f"terminal-{name}.svg").write_text(terminal(t), encoding="utf-8")
         (ASSETS / f"banner-{name}.svg").write_text(banner(t), encoding="utf-8")
         (ASSETS / f"flow-{name}.svg").write_text(flow(t), encoding="utf-8")
         (ASSETS / f"languages-{name}.svg").write_text(languages(t), encoding="utf-8")
